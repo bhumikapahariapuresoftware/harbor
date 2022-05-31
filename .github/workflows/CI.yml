@@ -348,3 +348,4 @@ jobs:
         with:
           file:  ./src/github.com/goharbor/harbor/src/portal/coverage/lcov.info
           flags: unittests
+
