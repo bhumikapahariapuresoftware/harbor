@@ -348,4 +348,61 @@ jobs:
         with:
           file:  ./src/github.com/goharbor/harbor/src/portal/coverage/lcov.info
           flags: unittests
-
+          
+  APITEST_DB_arm64:
+    env:
+      APITEST_DB: true
+    runs-on: [self-hosted, linux, ARM64, ci]
+    timeout-minutes: 100
+    steps:
+      - name: Set up Go 1.15
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.15.12
+        id: go
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/goharbor/harbor-arm
+      - name: setup env
+        run: |
+          cd src/github.com/goharbor/harbor-arm
+          sudo make download compile_redis prepare_arm_data pre_update
+          pwd
+          go env
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GOPATH=$(go env GOPATH):$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          echo "TOKEN_PRIVATE_KEY_PATH=${GITHUB_WORKSPACE}/src/github.com/goharbor/harbor-arm/tests/private_key.pem" >> $GITHUB_ENV
+          IP=`hostname -I | awk '{print $1}'`
+          echo "IP=$IP" >> $GITHUB_ENV
+        shell: bash
+      - name: before_install
+        run: |
+          set -x
+          cd src/github.com/goharbor/harbor-arm
+          pwd
+          env
+          df -h
+          #sudo apt install -y xvfb
+          #xvfb-run ls
+          sudo pip3 install docker-compose
+      - name: install
+        run: |
+          set -x
+          cd src/github.com/goharbor/harbor-arm/src/github.com/goharbor/harbor
+          env
+          df -h
+          docker system prune -a -f
+          bash ./tests/showtime.sh ./tests/ci/api_common_install.sh $IP DB
+      - name: script
+        run: |
+          cd src/github.com/goharbor/harbor-arm/src/github.com/goharbor/harbor
+          echo IP: $IP
+          df -h
+          bash ./tests/showtime.sh ./tests/ci/api_run.sh DB $IP
+          df -h
+      - name: clean
+        run: |
+          set -x
+          cd src/github.com/goharbor/harbor-arm/src/github.com/goharbor/harbor
+          bash ./tests/ci/clean.sh $PWD
